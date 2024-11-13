@@ -22,7 +22,7 @@ import java.util.Set;
 /**
  * Represents a compilation of events. A compilation is a collection of events
  * that are grouped together under a common title and can be pinned for visibility.
- *
+ * <p>
  * This entity is stored in the "compilations" table in the database.
  */
 @Entity

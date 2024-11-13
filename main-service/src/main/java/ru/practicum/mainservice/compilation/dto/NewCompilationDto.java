@@ -13,9 +13,7 @@ import java.util.List;
 @Builder
 @FieldDefaults(level = AccessLevel.PRIVATE)
 public class NewCompilationDto {
-    @NotBlank
-    @Size(min = 1, max = 50, message = "Category name must be between 1 and 50 characters")
-    String title;
+    @NotBlank @Size(min = 1, max = 50, message = "Category name must be between 1 and 50 characters") String title;
     List<Long> events;
     @Builder.Default
     boolean pinned = false;

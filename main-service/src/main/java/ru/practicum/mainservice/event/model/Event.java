@@ -31,72 +31,104 @@ import java.time.LocalDateTime;
 @FieldDefaults(level = AccessLevel.PRIVATE)
 public class Event {
 
-    /** Unique identifier of the event. */
+    /**
+     * Unique identifier of the event.
+     */
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     Long id;
 
-    /** Short annotation or summary of the event. */
+    /**
+     * Short annotation or summary of the event.
+     */
     @Column(nullable = false, length = 2000)
     String annotation;
 
-    /** Category of the event. Linked with the category entity. */
+    /**
+     * Category of the event. Linked with the category entity.
+     */
     @ManyToOne
     @JoinColumn(name = "category_id", nullable = false)
     Category category;
 
-    /** Number of confirmed requests to join the event. */
+    /**
+     * Number of confirmed requests to join the event.
+     */
     @Column(name = "confirmed_requests")
     Long confirmedRequests;
 
-    /** Date and time when the event was created. */
+    /**
+     * Date and time when the event was created.
+     */
     @Column(name = "created_on", nullable = false)
     LocalDateTime createdOn;
 
-    /** Detailed description of the event. */
+    /**
+     * Detailed description of the event.
+     */
     @Column(nullable = false, length = 7000)
     String description;
 
-    /** Date and time when the event will take place. */
+    /**
+     * Date and time when the event will take place.
+     */
     @Column(name = "event_date", nullable = false)
     LocalDateTime eventDate;
 
-    /** The user who initiated or created the event. */
+    /**
+     * The user who initiated or created the event.
+     */
     @ManyToOne
     @JoinColumn(name = "initiator_id", nullable = false)
     User initiator;
 
-    /** Location details where the event will occur. */
+    /**
+     * Location details where the event will occur.
+     */
     @Embedded
     Location location;
 
-    /** Indicates whether participation in the event is paid. */
+    /**
+     * Indicates whether participation in the event is paid.
+     */
     @Column(nullable = false)
     boolean paid;
 
-    /** Limit on the number of participants allowed to join the event. Defaults to 0 (no limit). */
+    /**
+     * Limit on the number of participants allowed to join the event. Defaults to 0 (no limit).
+     */
     @Builder.Default
     @Column(name = "participant_limit", nullable = false)
     Long participantLimit = 0L;
 
-    /** Date and time when the event was published. */
+    /**
+     * Date and time when the event was published.
+     */
     @Column(name = "published_on")
     LocalDateTime publishedOn;
 
-    /** Whether moderation is required for participant requests. Defaults to true. */
+    /**
+     * Whether moderation is required for participant requests. Defaults to true.
+     */
     @Builder.Default
     @Column(name = "request_moderation", nullable = false)
     boolean requestModeration = true;
 
-    /** Current state of the event (e.g., PENDING, PUBLISHED). */
+    /**
+     * Current state of the event (e.g., PENDING, PUBLISHED).
+     */
     @Column(nullable = false)
     @Enumerated(EnumType.STRING)
     State state;
 
-    /** Title of the event. */
+    /**
+     * Title of the event.
+     */
     @Column(nullable = false, length = 120)
     String title;
 
-    /** Number of views the event has received. */
+    /**
+     * Number of views the event has received.
+     */
     Long views;
 }
