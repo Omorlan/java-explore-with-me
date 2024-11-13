@@ -6,10 +6,10 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import ru.practicum.dto.EndpointHitDto;
 import ru.practicum.dto.ViewStatsDto;
+import ru.practicum.statsserver.stats.exception.exception.BadRequestException;
 import ru.practicum.statsserver.stats.mapper.EndpointHitMapper;
 import ru.practicum.statsserver.stats.model.EndpointHit;
 import ru.practicum.statsserver.stats.repository.StatsRepository;
-import ru.practicum.statsserver.stats.util.DateTimeUtil;
 
 import java.time.LocalDateTime;
 import java.util.ArrayList;
@@ -50,20 +50,19 @@ public class StatsServiceImpl implements StatsService {
      * @return A list of {@link ViewStatsDto} objects representing statistics for each URI.
      */
     @Override
-    public List<ViewStatsDto> getStats(String start,
-                                       String end,
+    public List<ViewStatsDto> getStats(LocalDateTime start,
+                                       LocalDateTime end,
                                        List<String> uris,
                                        boolean unique) {
-        LocalDateTime startTime = parseDate(start);
-        LocalDateTime endTime = parseDate(end);
-        log.info("Fetching stats from {} to {} for URIs {} with unique flag set to {}",
-                startTime, endTime, uris, unique);
+        if (start.isAfter(end)) {
+            throw new BadRequestException("Start date must be before end date");
+        }
         List<EndpointHit> hits = new ArrayList<>();
 
         if (uris != null && !uris.isEmpty()) {
-            hits.addAll(statsRepository.findByTimestampBetweenAndUriIn(startTime, endTime, uris));
+            hits.addAll(statsRepository.findByTimestampBetweenAndUriIn(start, end, uris));
         } else {
-            hits.addAll(statsRepository.findByTimestampBetween(startTime, endTime));
+            hits.addAll(statsRepository.findByTimestampBetween(start, end));
         }
 
         if (unique) {
@@ -75,20 +74,5 @@ public class StatsServiceImpl implements StatsService {
         log.info("Fetched {} stats entries", statsDtos.size());
 
         return statsDtos;
-    }
-
-    /**
-     * Parses a string date into a {@link LocalDateTime} object.
-     *
-     * @param date a string representing the date in the format "yyyy-MM-dd HH:mm:ss".
-     * @return a {@link LocalDateTime} object.
-     * @throws IllegalArgumentException if the date format is invalid.
-     */
-    private LocalDateTime parseDate(String date) {
-        try {
-            return LocalDateTime.parse(date, DateTimeUtil.DATE_TIME_FORMATTER);
-        } catch (Exception e) {
-            throw new IllegalArgumentException("Invalid date format. Expected: yyyy-MM-dd HH:mm:ss");
-        }
     }
 }
