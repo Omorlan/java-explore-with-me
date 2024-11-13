@@ -13,12 +13,15 @@ public class Util {
 
     public static final DateTimeFormatter DATE_TIME_FORMATTER = DateTimeFormatter.ofPattern(DATE_TIME_PATTERN);
     public static String INCOR_REQ = "Incorrectly made request.";
+
     public static String compilationNotFound(Long compId) {
         return String.format("Compilation with id=%d not found", compId);
     }
+
     public static String eventNotFound(Long eventId) {
         return String.format("Event with id=%d not found", eventId);
     }
+
     public static String userNotFound(Long userId) {
         return String.format("User with id=%d not found", userId);
     }

@@ -32,36 +32,30 @@ public class RequestServiceImpl implements RequestService {
     @Override
     @Transactional(readOnly = true)
     public List<ParticipationRequestDto> getRequests(Long userId) {
-        User user = userRepository.findById(userId)
-                .orElseThrow(() -> new NotFoundException(Util.userNotFound(userId)));
-        
+        User user = userRepository.findById(userId).orElseThrow(() -> new NotFoundException(Util.userNotFound(userId)));
+
         Collection<ParticipationRequest> requests = requestRepository.findAllByRequester(user);
 
         if (requests.isEmpty()) {
             return List.of();
         }
 
-        return requests.stream()
-                .map(requestMapper::toParticipationRequestDto)
-                .toList();
+        return requests.stream().map(requestMapper::toParticipationRequestDto).toList();
     }
 
     @Override
     @Transactional
     public ParticipationRequestDto create(Long userId, Long eventId) {
-        User user = userRepository.findById(userId)
-                .orElseThrow(() -> new NotFoundException(Util.userNotFound(userId)));
+        User user = userRepository.findById(userId).orElseThrow(() -> new NotFoundException(Util.userNotFound(userId)));
 
-        Event event = eventRepository.findById(eventId)
-                .orElseThrow(() -> new NotFoundException(String.format("Event with id=%d not found", eventId)));
+        Event event = eventRepository.findById(eventId).orElseThrow(() -> new NotFoundException(String.format("Event with id=%d not found", eventId)));
 
         if (event.getInitiator().equals(user)) {
             throw new EventParticipationConstraintException(String.format("User with id=%d is the owner of the event with id=%d.", userId, eventId));
         }
 
         if (!event.getState().equals(State.PUBLISHED)) {
-            throw new EventParticipationConstraintException(String.format("Event not published. " +
-                    "A user with id=%d cannot make a request to participate in an event with id=%d.", userId, eventId));
+            throw new EventParticipationConstraintException(String.format("Event not published. " + "A user with id=%d cannot make a request to participate in an event with id=%d.", userId, eventId));
         }
 
         if (event.getParticipantLimit() > 0 && event.getConfirmedRequests().equals(event.getParticipantLimit())) {
@@ -74,12 +68,7 @@ public class RequestServiceImpl implements RequestService {
             status = RequestStatus.CONFIRMED;
         }
 
-        ParticipationRequest request = ParticipationRequest.builder()
-                .created(LocalDateTime.now())
-                .event(event)
-                .requester(user)
-                .status(status)
-                .build();
+        ParticipationRequest request = ParticipationRequest.builder().created(LocalDateTime.now()).event(event).requester(user).status(status).build();
 
         request = requestRepository.save(request);
 
@@ -94,11 +83,9 @@ public class RequestServiceImpl implements RequestService {
     @Override
     @Transactional
     public ParticipationRequestDto cancel(Long userId, Long requestId) {
-        User user = userRepository.findById(userId)
-                .orElseThrow(() -> new NotFoundException(Util.userNotFound(userId)));
+        User user = userRepository.findById(userId).orElseThrow(() -> new NotFoundException(Util.userNotFound(userId)));
 
-        ParticipationRequest request = requestRepository.findById(requestId)
-                .orElseThrow(() -> new NotFoundException(String.format("Request with id=%d not found", requestId)));
+        ParticipationRequest request = requestRepository.findById(requestId).orElseThrow(() -> new NotFoundException(String.format("Request with id=%d not found", requestId)));
 
         if (!request.getRequester().equals(user)) {
             throw new NotFoundException(String.format("Request with id=%d not found", requestId));

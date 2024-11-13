@@ -13,6 +13,7 @@ public class EventSpecification {
     private EventSpecification() {
         throw new IllegalStateException("Utility class");
     }
+
     public static Specification<Event> hasUsers(List<Long> users) {
         return (root, query, builder) -> users == null || users.isEmpty()
                 ? null
