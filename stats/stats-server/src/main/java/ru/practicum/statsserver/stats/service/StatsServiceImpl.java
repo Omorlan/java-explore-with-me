@@ -6,6 +6,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import ru.practicum.dto.EndpointHitDto;
 import ru.practicum.dto.ViewStatsDto;
+import ru.practicum.statsserver.stats.exception.exception.BadRequestException;
 import ru.practicum.statsserver.stats.mapper.EndpointHitMapper;
 import ru.practicum.statsserver.stats.model.EndpointHit;
 import ru.practicum.statsserver.stats.repository.StatsRepository;
@@ -53,7 +54,9 @@ public class StatsServiceImpl implements StatsService {
                                        LocalDateTime end,
                                        List<String> uris,
                                        boolean unique) {
-
+        if (start.isAfter(end)) {
+            throw new BadRequestException("Start date must be before end date");
+        }
         List<EndpointHit> hits = new ArrayList<>();
 
         if (uris != null && !uris.isEmpty()) {
