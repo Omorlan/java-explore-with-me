@@ -1,22 +1,17 @@
 package ru.practicum.mainservice.event.service;
 
-import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.data.jpa.domain.Specification;
-import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import ru.practicum.client.StatsClient;
-import ru.practicum.dto.EndpointHitDto;
-import ru.practicum.dto.ViewStatsDto;
 import ru.practicum.mainservice.category.model.Category;
 import ru.practicum.mainservice.category.repository.CategoryRepository;
 import ru.practicum.mainservice.event.dto.EventFullDto;
@@ -25,7 +20,6 @@ import ru.practicum.mainservice.event.dto.EventRequestStatusUpdateResult;
 import ru.practicum.mainservice.event.dto.EventShortDto;
 import ru.practicum.mainservice.event.dto.NewEventDto;
 import ru.practicum.mainservice.event.dto.UpdateEventAdminRequest;
-import ru.practicum.mainservice.event.dto.UpdateEventRequest;
 import ru.practicum.mainservice.event.dto.UpdateEventUserRequest;
 import ru.practicum.mainservice.event.mapper.EventMapper;
 import ru.practicum.mainservice.event.model.Event;
@@ -48,15 +42,12 @@ import ru.practicum.mainservice.user.model.User;
 import ru.practicum.mainservice.user.repository.UserRepository;
 import ru.practicum.mainservice.util.Util;
 
-import java.time.Duration;
 import java.time.LocalDateTime;
-import java.time.format.DateTimeFormatter;
 import java.util.Collection;
 import java.util.List;
 
 import static ru.practicum.mainservice.event.specification.EventSpecification.getAdminFilters;
 import static ru.practicum.mainservice.event.specification.EventSpecification.getPublicFilters;
-import static ru.practicum.mainservice.util.Util.DATE_TIME_FORMATTER;
 
 @Service
 @Slf4j
@@ -67,12 +58,10 @@ public class EventServiceImpl implements EventService {
     private final UserRepository userRepository;
     private final CategoryRepository categoryRepository;
     private final RequestRepository requestRepository;
-    private final StatsClient statsClient;
     private final EventMapper eventMapper;
     private final RequestMapper requestMapper;
-    private final ObjectMapper objectMapper;
-    @Value("${spring.application.name}")
-    private String serviceId;
+    private final StatisticsServiceForEvent statisticsServiceForEvent;
+
 
     @Override
     @Transactional
@@ -106,11 +95,11 @@ public class EventServiceImpl implements EventService {
 
 
         Page<Event> events = eventRepository.findAll(spec, pageable);
-        sendStatisticalData(request);
+        statisticsServiceForEvent.sendStatisticalData(request);
 
         List<Event> eventList = events.getContent().stream()
                 .map(event -> {
-                    Long views = getUniqueViews(event, request.getRequestURI()) + 1;
+                    Long views = statisticsServiceForEvent.getUniqueViews(event, request.getRequestURI()) + 1;
                     event.setViews(views);
                     return event;
                 })
@@ -134,7 +123,7 @@ public class EventServiceImpl implements EventService {
             throw new NotFoundException(Util.eventNotFound(eventId));
         }
 
-        Long views = getUniqueViews(event, request.getRequestURI());
+        Long views = statisticsServiceForEvent.getUniqueViews(event, request.getRequestURI());
         views++;
         event.setViews(views);
 
@@ -142,7 +131,7 @@ public class EventServiceImpl implements EventService {
 
         EventFullDto fullDto = eventMapper.toEventFullDto(event);
 
-        sendStatisticalData(request);
+        statisticsServiceForEvent.sendStatisticalData(request);
         return fullDto;
     }
 
@@ -174,7 +163,7 @@ public class EventServiceImpl implements EventService {
 
         StringBuilder updatedFieldsLog = new StringBuilder();
 
-        updateEventFields(event, updateEventAdminRequest, updatedFieldsLog);
+        eventMapper.updateEventFields(event, updateEventAdminRequest, updatedFieldsLog, categoryRepository);
         if (updateEventAdminRequest.getStateAction() != null) {
             handleStateAction(updateEventAdminRequest, event);
             updatedFieldsLog.append("StateAction|");
@@ -304,7 +293,7 @@ public class EventServiceImpl implements EventService {
     private void updateEvent(UpdateEventUserRequest updateEventUserRequest,
                              Event event,
                              StringBuilder updatedFieldsLog) {
-        updateEventFields(event, updateEventUserRequest, updatedFieldsLog);
+        eventMapper.updateEventFields(event, updateEventUserRequest, updatedFieldsLog, categoryRepository);
         if (updateEventUserRequest.getStateAction() != null) {
             handleStateAction(updateEventUserRequest, event);
             updatedFieldsLog.append("StateAction|");
@@ -312,12 +301,6 @@ public class EventServiceImpl implements EventService {
 
     }
 
-    private void validateEventDate(LocalDateTime eventDate) {
-        if (!isStartDateValid(LocalDateTime.now(), eventDate, 2)) {
-            throw new BadRequestException("The date and time for which the event is scheduled cannot be earlier" +
-                    " than two hours from the current moment.");
-        }
-    }
 
     private void handleStateAction(UpdateEventUserRequest updateEventUserRequest, Event event) {
         if (updateEventUserRequest.getStateAction().equals(StateUser.SEND_TO_REVIEW)) {
@@ -400,88 +383,5 @@ public class EventServiceImpl implements EventService {
                 .confirmedRequests(requestRepository.findAllByEventAndStatus(event, RequestStatus.CONFIRMED).stream().map(requestMapper::toParticipationRequestDto).toList())
                 .rejectedRequests(requestRepository.findAllByEventAndStatus(event, RequestStatus.REJECTED).stream().map(requestMapper::toParticipationRequestDto).toList())
                 .build();
-    }
-
-    private boolean isStartDateValid(LocalDateTime publicationDate, LocalDateTime startDate, int constraint) {
-        long hoursBetween = Duration.between(publicationDate, startDate).toHours();
-        return hoursBetween >= constraint;
-    }
-
-    private void sendStatisticalData(HttpServletRequest request) {
-        EndpointHitDto stat = EndpointHitDto.builder()
-                .app(serviceId)
-                .uri(request.getRequestURI())
-                .ip(request.getRemoteAddr())
-                .timestamp(LocalDateTime.now())
-                .build();
-
-        statsClient.create(stat);
-    }
-
-    private List<ViewStatsDto> convertResponseToList(ResponseEntity<Object> response) {
-        if (response.getBody() == null) {
-            return List.of();
-        }
-        try {
-            return objectMapper.convertValue(response.getBody(), new TypeReference<List<ViewStatsDto>>() {
-            });
-        } catch (Exception e) {
-            throw new IllegalStateException("Failed to convert response to list", e);
-        }
-    }
-
-    private Long getUniqueViews(Event event, String uri) {
-        DateTimeFormatter formatter = DATE_TIME_FORMATTER;
-
-        String startDate = event.getCreatedOn().format(formatter);
-        String endDate = LocalDateTime.now().format(formatter);
-        List<String> uris = List.of(uri);
-
-        List<ViewStatsDto> stats = convertResponseToList(statsClient.getStats(startDate, endDate, uris, true));
-
-        return stats.isEmpty()
-                ? 0L
-                : stats.stream().mapToLong(ViewStatsDto::getHits).sum();
-    }
-
-    private void updateEventFields(Event event, UpdateEventRequest updateEventRequest, StringBuilder updatedFieldsLog) {
-        if (updateEventRequest.getAnnotation() != null) {
-            event.setAnnotation(updateEventRequest.getAnnotation());
-            updatedFieldsLog.append("Annotation|");
-        }
-        if (updateEventRequest.getCategory() != null) {
-            event.setCategory(categoryRepository.findById(updateEventRequest.getCategory())
-                    .orElseThrow(() -> new NotFoundException(String.format("Category with id=%d not found", updateEventRequest.getCategory()))));
-            updatedFieldsLog.append("Category|");
-        }
-        if (updateEventRequest.getDescription() != null) {
-            event.setDescription(updateEventRequest.getDescription());
-            updatedFieldsLog.append("Description|");
-        }
-        if (updateEventRequest.getLocation() != null) {
-            event.setLocation(updateEventRequest.getLocation());
-            updatedFieldsLog.append("Location|");
-        }
-        if (updateEventRequest.getPaid() != null) {
-            event.setPaid(updateEventRequest.getPaid());
-            updatedFieldsLog.append("Paid|");
-        }
-        if (updateEventRequest.getParticipantLimit() != null) {
-            event.setParticipantLimit(updateEventRequest.getParticipantLimit());
-            updatedFieldsLog.append("ParticipantLimit|");
-        }
-        if (updateEventRequest.getRequestModeration() != null) {
-            event.setRequestModeration(updateEventRequest.getRequestModeration());
-            updatedFieldsLog.append("RequestModeration|");
-        }
-        if (updateEventRequest.getEventDate() != null) {
-            validateEventDate(updateEventRequest.getEventDate());
-            event.setEventDate(updateEventRequest.getEventDate());
-            updatedFieldsLog.append("EventDate|");
-        }
-        if (updateEventRequest.getTitle() != null) {
-            event.setTitle(updateEventRequest.getTitle());
-            updatedFieldsLog.append("Title|");
-        }
     }
 }
