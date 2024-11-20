@@ -6,6 +6,7 @@ import ru.practicum.mainservice.comment.dto.NewCommentDto;
 import ru.practicum.mainservice.comment.model.Comment;
 import ru.practicum.mainservice.event.model.Event;
 import ru.practicum.mainservice.user.model.User;
+
 @Component
 public class CommentMapper {
     public static Comment toComment(NewCommentDto newCommentDto, User user, Event event) {
