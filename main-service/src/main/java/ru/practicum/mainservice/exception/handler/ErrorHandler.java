@@ -12,6 +12,7 @@ import org.springframework.web.method.annotation.MethodArgumentTypeMismatchExcep
 import ru.practicum.mainservice.exception.exception.BadRequestException;
 import ru.practicum.mainservice.exception.exception.ConflictException;
 import ru.practicum.mainservice.exception.exception.ConstraintUpdatingException;
+import ru.practicum.mainservice.exception.exception.ErrorCommentException;
 import ru.practicum.mainservice.exception.exception.EventParticipationConstraintException;
 import ru.practicum.mainservice.exception.exception.NotFoundException;
 import ru.practicum.mainservice.exception.exception.ViolationOfEditingRulesException;
@@ -64,6 +65,7 @@ public class ErrorHandler {
                 Util.INCOR_REQ,
                 message);
     }
+
 
     @ExceptionHandler
     @ResponseStatus(HttpStatus.CONFLICT)
@@ -123,6 +125,14 @@ public class ErrorHandler {
                 "Integrity constraint has been violated.",
                 message
         );
+    }
+
+    @ExceptionHandler
+    @ResponseStatus(HttpStatus.CONFLICT)
+    public ApiError handleErrorCommentException(final ErrorCommentException e) {
+        return new ApiError(HttpStatus.CONFLICT,
+                "Restriction of crearting comment.",
+                e.getMessage());
     }
 
     private void getLog(RuntimeException e, String exceptionName) {
