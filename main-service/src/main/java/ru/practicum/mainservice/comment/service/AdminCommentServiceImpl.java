@@ -28,10 +28,8 @@ public class AdminCommentServiceImpl implements AdminCommentService {
     @Override
     public List<CommentDtoOut> getCommentsOfUser(Long userId, Pageable pageable) {
         User user = entityFinderService.findUserById(userId);
-        List<Comment> comments = commentRepository.findByUser(user, pageable);
-        return comments.stream()
+        return commentRepository.findByUser(user, pageable).stream()
                 .map(CommentMapper::toCommentDtoOut)
                 .toList();
     }
-
 }

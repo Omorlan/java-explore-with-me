@@ -9,6 +9,7 @@ import ru.practicum.mainservice.event.repository.EventRepository;
 import ru.practicum.mainservice.exception.exception.NotFoundException;
 import ru.practicum.mainservice.user.model.User;
 import ru.practicum.mainservice.user.repository.UserRepository;
+import ru.practicum.mainservice.util.Util;
 
 @Service
 @RequiredArgsConstructor
@@ -20,16 +21,16 @@ public class EntityFinderService {
 
     public User findUserById(Long userId) {
         return userRepository.findById(userId)
-                .orElseThrow(() -> new NotFoundException("User with id: " + userId + " not found."));
+                .orElseThrow(() -> new NotFoundException(Util.userNotFound(userId)));
     }
 
     public Event findEventById(Long eventId) {
         return eventRepository.findById(eventId)
-                .orElseThrow(() -> new NotFoundException("Event with id: " + eventId + " not found."));
+                .orElseThrow(() -> new NotFoundException(Util.eventNotFound(eventId)));
     }
 
     public Comment findCommentById(Long commentId) {
         return commentRepository.findById(commentId)
-                .orElseThrow(() -> new NotFoundException("Comment with id: " + commentId + " not found."));
+                .orElseThrow(() -> new NotFoundException(Util.compilationNotFound(commentId)));
     }
 }

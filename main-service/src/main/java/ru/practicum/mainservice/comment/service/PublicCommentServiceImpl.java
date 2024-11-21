@@ -7,7 +7,6 @@ import ru.practicum.mainservice.comment.dto.CommentDtoOut;
 import ru.practicum.mainservice.comment.mapper.CommentMapper;
 import ru.practicum.mainservice.comment.model.Comment;
 import ru.practicum.mainservice.comment.repository.CommentRepository;
-import ru.practicum.mainservice.event.model.Event;
 
 import java.util.List;
 
@@ -20,12 +19,7 @@ public class PublicCommentServiceImpl implements PublicCommentService {
 
     @Override
     public List<CommentDtoOut> getCommentsOfEvent(Long eventId, Pageable pageable) {
-        Event event = entityFinderService.findEventById(eventId);
-        List<Comment> comments = commentRepository.findByEvent(event, pageable);
-        return comments.stream()
-                .map(CommentMapper::toCommentDtoOut)
-                .toList();
+        List<Comment> comments = commentRepository.findByEvent(entityFinderService.findEventById(eventId), pageable);
+        return comments.stream().map(CommentMapper::toCommentDtoOut).toList();
     }
-
-
 }
