@@ -25,4 +25,5 @@ public class Util {
     public static String userNotFound(Long userId) {
         return String.format("User with id=%d not found", userId);
     }
+
 }
